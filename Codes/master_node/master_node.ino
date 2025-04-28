@@ -42,19 +42,23 @@ void manageEdgeNode(int nodeAddress, float temperature, int rotationPosition) {
   // Request moisture
 
   Wire.requestFrom(nodeAddress, 2);
-  if(Wire.available()) {
+  
+  while(1){
     moisture_1 = Wire.read();
-    moisture_2 = Wire.read();
-    // Serial.print("Pot ");
-    // Serial.print(nodeAddress == 0x10 ? 1 : 2);
-    Serial.print(" - Moisture: ");
-    Serial.print(moisture_1);
-    Serial.println(moisture_2);
-    Serial.print("%, Temperature: ");
-    Serial.print(temperature);
-    Serial.println("°C");
-
+    if (moisture_1 != -1){
+      break;
+    }
   }
+  moisture_2 = Wire.read();
+  // Serial.print("Pot ");
+  // Serial.print(nodeAddress == 0x10 ? 1 : 2);
+  Serial.print(" - Moisture: ");
+  // Serial.print(moisture_1);
+  Serial.print((int)moisture_1);
+  Serial.println(moisture_2);
+  Serial.print("%, Temperature: ");
+  Serial.print(temperature);
+  Serial.println("°C");
   char most[3];
   most[0] = moisture_1;
   most[1] = moisture_2;

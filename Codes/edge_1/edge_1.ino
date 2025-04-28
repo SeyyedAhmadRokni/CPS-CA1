@@ -3,9 +3,8 @@
 
 // مشخصات سخت افزاری
 #define SOIL_SENSOR_PIN A0  // پین سنسور رطوبت
-#define DC_MOTOR_PIN1 4      // برای کنترل L298N - IN1
-#define DC_MOTOR_PIN2 5      // برای کنترل L298N - IN2
-#define SERVO_PIN 3          // پین موتور سروو
+#define DC_MOTOR_PIN1 8      // برای کنترل L298N - IN1
+#define SERVO_PIN 9          // پین موتور سروو
 
 Servo potServo; // سروو برای چرخش گلدان
 
@@ -19,7 +18,6 @@ void setup() {
   potServo.attach(SERVO_PIN);
 
   pinMode(DC_MOTOR_PIN1, OUTPUT);
-  pinMode(DC_MOTOR_PIN2, OUTPUT);
 
   Serial.begin(9600);
   Serial.println("hi");
@@ -35,9 +33,11 @@ void loop() {
 
 // دریافت فرمان از Master
 void receiveData(int howMany) {
-  while(Wire.available()) {
+  while(1) {
     char command = Wire.read();
-    
+    if (command == -1){
+      continue;
+    }
     if(command == 'W') {
       // فرمان آبیاری
       int irrigationRate = Wire.read(); // نرخ آبیاری بر اساس درصد
@@ -71,10 +71,8 @@ void sendData() {
 // توابع کنترل آب
 void openWaterValve() {
   digitalWrite(DC_MOTOR_PIN1, HIGH);
-  digitalWrite(DC_MOTOR_PIN2, LOW);
 }
 
 void closeWaterValve() {
   digitalWrite(DC_MOTOR_PIN1, LOW);
-  digitalWrite(DC_MOTOR_PIN2, LOW);
 }
