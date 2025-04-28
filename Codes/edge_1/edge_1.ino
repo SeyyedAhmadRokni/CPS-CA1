@@ -9,7 +9,7 @@
 
 Servo potServo; // سروو برای چرخش گلدان
 
-int soil_moisture = 70; // متغیر برای رطوبت خاک
+int soil_moisture = 71; // متغیر برای رطوبت خاک
 
 void setup() {
   Wire.begin(0x10); // آدرس گره لبه اول  (گره دوم بشه 0x11)
@@ -22,6 +22,7 @@ void setup() {
   pinMode(DC_MOTOR_PIN2, OUTPUT);
 
   Serial.begin(9600);
+  Serial.println("hi");
 }
 
 void loop() {
@@ -40,6 +41,9 @@ void receiveData(int howMany) {
     if(command == 'W') {
       // فرمان آبیاری
       int irrigationRate = Wire.read(); // نرخ آبیاری بر اساس درصد
+      Serial.print("irrigationRate :");
+      Serial.println(irrigationRate);
+
       if (irrigationRate > 0) {
         openWaterValve();
       } else {
@@ -50,13 +54,18 @@ void receiveData(int howMany) {
       // فرمان چرخش گلدان
       int rotation = Wire.read();
       potServo.write(rotation);
+      Serial.print("rotation :");
+      Serial.println(rotation);
     }
+
   }
 }
 
 // ارسال داده به Master
 void sendData() {
-  Wire.write(soil_moisture); // ارسال مقدار رطوبت
+  Wire.write(sprintf("%d", soil_moisture)); // ارسال مقدار رطوبت
+  Serial.print("soil moisture :");
+  Serial.println(sprintf("%d", soil_moisture));
 }
 
 // توابع کنترل آب
