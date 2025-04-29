@@ -9,13 +9,13 @@
 #define LIGHT_SENSOR_RIGHT A2
 #define TEMPERATURE_SENSOR A0
 
-#define EDGE_NODE_1 0x10
+#define EDGE_NODE_1 23
 #define EDGE_NODE_2 0x11
 
 DHT dht(DHT_PIN, DHT_TYPE);
 
 void setup() {
-  Wire.begin(); // Master
+  Wire.begin();
   Serial.begin(9600);
   dht.begin();
   
@@ -23,21 +23,28 @@ void setup() {
 }
 
 void loop() {
-  float temperature = analogRead(TEMPERATURE_SENSOR);
-  int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
-  int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
+  // float temperature = analogRead(TEMPERATURE_SENSOR);
+  // int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
+  // int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
   
-  int optimalPosition = (lightLeft > lightRight) ? 0 : 60;
+  // int optimalPosition = (lightLeft > lightRight) ? 0 : 60;
   
-  manageEdgeNode(EDGE_NODE_1, temperature, optimalPosition);
-  manageEdgeNode(EDGE_NODE_2, temperature, optimalPosition);
+  // manageEdgeNode(EDGE_NODE_1, temperature, optimalPosition);
+  manageEdgeNode(EDGE_NODE_1, 3, 3);
+  // manageEdgeNode(EDGE_NODE_2, temperature, optimalPosition);
   
-  delay(3000);
+  delay(31);
 }
 
 void manageEdgeNode(int nodeAddress, float temperature, int rotationPosition) {
   char moisture_1 = 0;
   char moisture_2 = 0;
+
+  Wire.beginTransmission(nodeAddress);
+  Serial.println("go to write W on bus");
+  Wire.write('W');
+  Wire.endTransmission(nodeAddress);
+  return;
 
   // Request moisture
 

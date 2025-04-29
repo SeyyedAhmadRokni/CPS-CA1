@@ -11,7 +11,7 @@ Servo potServo; // سروو برای چرخش گلدان
 int soil_moisture = 71; // متغیر برای رطوبت خاک
 
 void setup() {
-  Wire.begin(0x10); // آدرس گره لبه اول  (گره دوم بشه 0x11)
+  Wire.begin(23);
   Wire.onReceive(receiveData); // وقتی Master داده فرستاد
   Wire.onRequest(sendData);    // وقتی Master درخواست داده کرد
 
@@ -20,35 +20,41 @@ void setup() {
   pinMode(DC_MOTOR_PIN1, OUTPUT);
 
   Serial.begin(9600);
-  Serial.println("hi");
+  Serial.println("edge 1 started");
 }
 
 void loop() {
   // هر ثانیه رطوبت خاک رو بخون
   int rawMoisture = analogRead(SOIL_SENSOR_PIN);
-  soil_moisture = map(rawMoisture, 0, 1023, 0, 100); // تبدیل به درصد
+  soil_moisture = map(rawMoisture, 0, 1023, 0, 100);
+  Serial.println(soil_moisture);
+  // int data = Wire.read();
+  // Serial.println(data);
   
   delay(1000);
 }
 
 // دریافت فرمان از Master
 void receiveData(int howMany) {
-  while(1) {
+  
+  while(Wire.available()) {
     char command = Wire.read();
     if (command == -1){
       continue;
     }
     if(command == 'W') {
       // فرمان آبیاری
-      int irrigationRate = Wire.read(); // نرخ آبیاری بر اساس درصد
-      Serial.print("irrigationRate :");
-      Serial.println(irrigationRate);
 
-      if (irrigationRate > 0) {
-        openWaterValve();
-      } else {
-        closeWaterValve();
-      }
+      Serial.println("Command W recieved");
+      // int irrigationRate = Wire.read(); // نرخ آبیاری بر اساس درصد
+      // Serial.print("irrigationRate :");
+      // Serial.println(irrigationRate);
+
+      // if (irrigationRate > 0) {
+      //   openWaterValve();
+      // } else {
+      //   closeWaterValve();
+      // }
     }
     else if(command == 'R') {
       // فرمان چرخش گلدان
