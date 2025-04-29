@@ -1,111 +1,87 @@
 #include <Wire.h>
 #include <DHT.h>
-#include <string.h>
 
-// Pin and sensor configuration
 #define DHT_PIN 2
 #define DHT_TYPE DHT22
+#define EDGE_NODE_1 23
 #define LIGHT_SENSOR_LEFT A1
 #define LIGHT_SENSOR_RIGHT A2
-#define TEMPERATURE_SENSOR A0
-
-#define EDGE_NODE_1 23
-#define EDGE_NODE_2 0x11
 
 DHT dht(DHT_PIN, DHT_TYPE);
 
 void setup() {
-  Wire.begin();
+  Wire.begin(); // به عنوان مستر
   Serial.begin(9600);
   dht.begin();
-  
+
+  delay(2000); // فرصت دادن به سنسور DHT
   Serial.println("Plant management system initialized");
 }
 
 void loop() {
-  // float temperature = analogRead(TEMPERATURE_SENSOR);
-  // int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
-  // int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
-  
-  // int optimalPosition = (lightLeft > lightRight) ? 0 : 60;
-  
-  // manageEdgeNode(EDGE_NODE_1, temperature, optimalPosition);
-  manageEdgeNode(EDGE_NODE_1, 3, 3);
-  // manageEdgeNode(EDGE_NODE_2, temperature, optimalPosition);
-  
-  delay(31);
+  float temperature = dht.readTemperature();
+  int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
+  int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
+
+  int optimalPosition = (lightLeft > lightRight) ? 0 : 60;
+
+  manageEdgeNode(EDGE_NODE_1, temperature, optimalPosition);
+
+  delay(5000); // هر ۵ ثانیه یک‌بار بررسی
 }
 
 void manageEdgeNode(int nodeAddress, float temperature, int rotationPosition) {
-  char moisture_1 = 0;
-  char moisture_2 = 0;
+  uint8_t moisture = 0;
 
+  // ارسال فرمان 'W' برای درخواست مقدار رطوبت
   Wire.beginTransmission(nodeAddress);
-  Serial.println("go to write W on bus");
   Wire.write('W');
-  Wire.endTransmission(nodeAddress);
-  return;
+  Wire.endTransmission();
 
-  // Request moisture
-
-  Wire.requestFrom(nodeAddress, 2);
-  
-  while(1){
-    moisture_1 = Wire.read();
-    if (moisture_1 != -1){
-      break;
+  // دریافت مقدار رطوبت
+  Wire.requestFrom(nodeAddress, 1);
+  unsigned long start = millis();
+  while (Wire.available() < 1) {
+    if (millis() - start > 1000) {
+      Serial.println("Timeout reading moisture");
+      return;
     }
   }
-  moisture_2 = Wire.read();
-  // Serial.print("Pot ");
-  // Serial.print(nodeAddress == 0x10 ? 1 : 2);
+  moisture = Wire.read();
+
+  Serial.print("Node ");
+  Serial.print(nodeAddress, HEX);
   Serial.print(" - Moisture: ");
-  // Serial.print(moisture_1);
-  Serial.print((int)moisture_1);
-  Serial.println(moisture_2);
+  Serial.print(moisture);
   Serial.print("%, Temperature: ");
   Serial.print(temperature);
   Serial.println("°C");
-  char most[3];
-  most[0] = moisture_1;
-  most[1] = moisture_2;
-  most[2] = '\0';
 
-  int moisture = atoi(most);
-  
   int irrigationRate = calculateIrrigationRate(moisture, temperature);
-  
-  // Send irrigation command
+
+  // ارسال نرخ آبیاری
   Wire.beginTransmission(nodeAddress);
   Wire.write('W');
-  Wire.write(sprintf("%d", irrigationRate));
+  Wire.write((uint8_t)irrigationRate);
   Wire.endTransmission();
-  
-  // Send rotation command
+
+  // ارسال زاویه چرخش
   Wire.beginTransmission(nodeAddress);
   Wire.write('R');
-  Wire.write(rotationPosition);
+  Wire.write((uint8_t)rotationPosition);
   Wire.endTransmission();
-  
-  Serial.print("Sent command to Pot ");
-  Serial.print(nodeAddress == 0x10 ? 1 : 2);
+
+  Serial.print("Sent to Node ");
+  Serial.print(nodeAddress, HEX);
   Serial.print(": Irrigation ");
   Serial.print(irrigationRate);
-  Serial.print(" drops/minute, Rotation to ");
+  Serial.print(", Rotation ");
   Serial.print(rotationPosition);
-  Serial.println(" degrees");
+  Serial.println("°");
 }
 
 int calculateIrrigationRate(int moisture, float temperature) {
-  if(moisture > 80) {
-    return 0;
-  } else if(moisture < 50) {
-    return 15;
-  } else {
-    if(temperature > 25) {
-      return 10;
-    } else {
-      return 5;
-    }
-  }
+  if (moisture > 80) return 0;
+  else if (moisture < 50) return 15;
+  else return (temperature > 25) ? 10 : 5;
 }
