@@ -19,9 +19,12 @@ void loop() {
   float temperature = analogRead(TEMPERATURE_SENSOR);
   Serial.print("temperature: ");
   Serial.println(temperature);
-  // int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
-  // int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
-  
+  int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
+  int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
+  Serial.print("sensor left: ");
+  Serial.println(lightLeft);
+  Serial.print("sensor right: ");
+  Serial.println(lightRight);
   // int optimalPosition = (lightLeft > lightRight) ? 0 : 60;
   
   // manageEdgeNode(EDGE_NODE_1, temperature, optimalPosition);
