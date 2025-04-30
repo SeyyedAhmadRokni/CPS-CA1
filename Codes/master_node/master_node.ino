@@ -1,10 +1,7 @@
 #include <Wire.h>
-#include <DHT.h>
 #include <string.h>
 
 // Pin and sensor configuration
-#define DHT_PIN 2
-#define DHT_TYPE DHT22
 #define LIGHT_SENSOR_LEFT A1
 #define LIGHT_SENSOR_RIGHT A2
 #define TEMPERATURE_SENSOR A0
@@ -12,18 +9,16 @@
 #define EDGE_NODE_1 23
 #define EDGE_NODE_2 0x11
 
-DHT dht(DHT_PIN, DHT_TYPE);
-
 void setup() {
   Wire.begin();
   Serial.begin(9600);
-  dht.begin();
-  
   Serial.println("Plant management system initialized");
 }
 
 void loop() {
-  // float temperature = analogRead(TEMPERATURE_SENSOR);
+  float temperature = analogRead(TEMPERATURE_SENSOR);
+  Serial.print("temperature: ");
+  Serial.println(temperature);
   // int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
   // int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
   
