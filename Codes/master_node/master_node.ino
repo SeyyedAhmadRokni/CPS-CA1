@@ -13,7 +13,7 @@ const char welcomePage[] PROGMEM =
   "<body><h1>Welcome to Master Node</h1><p>Status OK</p></body></html>";
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(9600);
   if (!ether.begin(sizeof Ethernet::buffer, mymac, SS)) {
     Serial.println("Ethernet init failed");
   }
