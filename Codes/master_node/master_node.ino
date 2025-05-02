@@ -7,6 +7,10 @@ static byte gwip[] = { 192, 168, 2, 1 }; // در صورت نیاز، Gateway
 
 byte Ethernet::buffer[700];
 
+#define LIGHT_SENSOR_LEFT A1
+#define LIGHT_SENSOR_RIGHT A2
+#define TEMPERATURE_SENSOR A0
+
 // محتوای HTML برای مرورگر
 const char welcomePage[] PROGMEM =
   "<!DOCTYPE html><html><head><title>Master Node</title></head>"
@@ -37,6 +41,15 @@ void loop() {
       int moisture = atoi(moistPtr + 9);
       Serial.print("Moisture received: ");
       Serial.println(moisture);
+      int temperature = analogRead(TEMPERATURE_SENSOR);
+      int lightLeft = analogRead(LIGHT_SENSOR_LEFT);
+      int lightRight = analogRead(LIGHT_SENSOR_RIGHT);
+      Serial.print("temperature: ");
+      Serial.println(temperature);
+      Serial.print("left light: ");
+      Serial.println(lightLeft);
+      Serial.print("right light: ");
+      Serial.println(lightRight);
 
       const char* response;
       if (moisture < 50)
