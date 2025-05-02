@@ -11,7 +11,9 @@ byte Ethernet::buffer[1000]; // افزایش اندازه بافر
 static long timer;
 bool ethernetInitialized = false;
 
+#define SOIL_SENSOR_PIN A0
 
+int soil_moisture;
 static void my_result_cb(byte status, word off, word len) {
   Serial.print("<<< reply ");
   Serial.print(millis() - timer);
@@ -49,14 +51,15 @@ void loop() {
 
   if (millis() > timer + REQUEST_RATE) {
     timer = millis();
-    int moisture = random(30, 90);
+    int rawMoisture = analogRead(SOIL_SENSOR_PIN);
+    soil_moisture = map(rawMoisture, 0, 1023, 0, 100);
     
     Serial.print(F("Sending moisture: "));
-    Serial.println(moisture);
+    Serial.println(soil_moisture);
 
     // ساخت پارامترهای GET به صورت صحیح
-    char params[20];
-    sprintf(params, "?moisture=%d", moisture);
+    char params[25];
+    sprintf(params, "?moisture=%d&edge=1", soil_moisture);
     
     // ارسال درخواست
     ether.browseUrl(PSTR("/moisture"), params, PSTR("192.168.2.2"), my_result_cb);
