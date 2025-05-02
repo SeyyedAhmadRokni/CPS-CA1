@@ -1,6 +1,6 @@
 #include <EtherCard.h>
 
-#define REQUEST_RATE 5000
+#define REQUEST_RATE 3000
 #define SOIL_SENSOR_PIN A0
 
 static byte mymac[] = { 0x74,0x69,0x69,0x2D,0x30,0x32 };
@@ -8,7 +8,7 @@ static byte myip[] = { 192,168,2,3 };
 static byte gwip[] = { 192,168,2,1 };
 static byte hisip[] = { 192,168,2,2 };
 
-byte Ethernet::buffer[1000];
+byte Ethernet::buffer[700];
 static long timer;
 bool ethernetInitialized = false;
 int edgeId = 1; // شناسه گره
@@ -45,12 +45,12 @@ static void responseCallback(byte status, word off, word len) {
 }
 
 void setup() {
-  Serial.begin(57600);
+  Serial.begin(9600);
   Serial.println(F("\nStarting Edge Client..."));
 
   // تلاش برای اتصال اترنت
-  for (int i = 0; i < 5; i++) {
-    if (ether.begin(sizeof Ethernet::buffer, mymac, 10)) {
+  for (int i = 0; i < 3; i++) {
+    if (ether.begin(sizeof Ethernet::buffer, mymac, SS)) {
       ethernetInitialized = true;
       break;
     }
