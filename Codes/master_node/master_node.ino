@@ -6,7 +6,7 @@ static byte mymac[] = {0x74,0x69,0x69,0x2D,0x30,0x31};
 static byte myip[]  = {192,168,2,2};
 static byte gwip[]  = {192,168,2,1};
 
-byte Ethernet::buffer[700];
+byte Ethernet::buffer[1000];
 
 // سنسورها
 #define LIGHT_SENSOR_LEFT  A1
@@ -68,14 +68,26 @@ void loop() {
   char waterBuf[20], rotBuf[20];
   strcpy_P(waterBuf, waterCmd);
   strcpy_P(rotBuf, rotCmd);
-  String resp = "HTTP/1.0 200 OK\r\nContent-Type: text/plain\r\n\r\n";
-  resp += String(waterBuf) + ";" + String(rotBuf);
+  char body[100];
 
+  strcpy(body, waterBuf);
+  strcat(body, ";");
+  strcat(body, rotBuf);
 
+  int bodyLen = strlen(body);
+  char resp[256];
+  snprintf(resp, sizeof(resp),
+  "HTTP/1.0 200 OK\r\n"
+  "%s"
+  "\r\n",
+   body);
+  Serial.print("Resp Len: ");
+  
+  int totalLen = strlen(resp);
+  Serial.println(totalLen);
+  memcpy(ether.tcpOffset(), resp, totalLen);
+  ether.httpServerReply(totalLen);
   // ارسال
-  memcpy(ether.tcpOffset(), resp.c_str(), resp.length());
-  ether.httpServerReply(resp.length());
-
   // لاگ برای دیباگ
   printSensorData(moisture, edgeId, temp, lightL, lightR);
 }

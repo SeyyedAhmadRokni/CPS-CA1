@@ -13,56 +13,65 @@ static byte myip[]  = {192,168,2,3};
 static byte gwip[]  = {192,168,2,1};
 static byte hisip[] = {192,168,2,2};
 
-byte Ethernet::buffer[700];
+byte Ethernet::buffer[1000];
 static long timer;
 bool ethernetInitialized = false;
 int edgeId = 1;
 Servo potServo;
 
-static void responseCallback(byte status, word off, word len) {
+static void responseCallback(byte status, int off, int len) {
   if (status != 0 || len == 0) {
     Serial.print("Error status="); Serial.println(status);
     return;
   }
 
-  // جدا کردن body از HTTP
-  String raw = String((char*)Ethernet::buffer + off).substring(0, len);
-  int idx = raw.indexOf("\r\n\r\n");
-  if (idx < 0) {
-    Serial.println("Invalid HTTP");
-    return;
-  }
-  String body = raw.substring(idx + 4);
+  // استخراج body از پاسخ HTTP
+  char body[len + 1];
+  memcpy(body, Ethernet::buffer + off, len);
+  body[len] = '\0'; // پایان رشته
+
+  Serial.println("===== RAW BODY =====");
+  Serial.println(body);
+  Serial.println("====================");
 
   // تفکیک دستورات
-  int sep = body.indexOf(';');
-  String waterCmd = body.substring(0, sep);
-  String rotCmd   = body.substring(sep + 1);
+  char* sep = strchr(body, ';');
+  if (!sep) {
+    Serial.println("Invalid format: missing ';'");
+    return;
+  }
 
-  Serial.print("Body: "); Serial.println(body);
+  *sep = '\0'; // جدا کردن دو بخش
+  const char* waterCmd = body;
+  const char* rotCmd = sep + 1;
+
+  Serial.print("Water Cmd: "); Serial.println(waterCmd);
+  Serial.print("Rotate Cmd: "); Serial.println(rotCmd);
 
   // اجرای آبیاری
-  if (waterCmd.startsWith("WATER:")) {
-    int rate = waterCmd.substring(6).toInt();  // cc یا قطره بر دقیقه
+  if (strncmp(waterCmd, "WATER:", 6) == 0) {
+    int rate = atoi(waterCmd + 6);
     Serial.print("Water rate: "); Serial.println(rate);
     digitalWrite(DC_MOTOR_PIN, HIGH);
-    delay(rate * 1000);  // یا تبدیل دلخواه
+    delay(rate * 1000);
     digitalWrite(DC_MOTOR_PIN, LOW);
   }
 
   // اجرای چرخش
-  if (rotCmd == "ROTATE:0") {
+  if (strcmp(rotCmd, "ROTATE:0") == 0) {
     Serial.println("Rotate to 0°");
     digitalWrite(SERVO_LED_PIN, HIGH);
     potServo.write(0);
     delay(500);
     digitalWrite(SERVO_LED_PIN, LOW);
-  } else {
+  } else if (strcmp(rotCmd, "ROTATE:60") == 0) {
     Serial.println("Rotate to 60°");
     digitalWrite(SERVO_LED_PIN, HIGH);
     potServo.write(60);
     delay(500);
     digitalWrite(SERVO_LED_PIN, LOW);
+  } else {
+    Serial.println("Unknown rotation command.");
   }
 }
 
@@ -92,7 +101,8 @@ void setup() {
 }
 
 void loop() {
-  ether.packetLoop(ether.packetReceive());
+  word len = ether.packetReceive();
+  word pos = ether.packetLoop(len);
   if (millis() - timer < REQUEST_RATE) return;
   timer = millis();
 
