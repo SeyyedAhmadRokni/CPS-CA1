@@ -288,3 +288,18 @@ ether.browseUrl(PSTR("/moisture"), params, PSTR("192.168.2.2"), responseCallback
 این پارامترها به‌صورت یک درخواست HTTP GET به سرور مرکزی ارسال می‌شوند.
 اگر سرور پاسخی ارسال کند، تابع responseCallback آن را پردازش خواهد کرد.
 ‍‍‍
+## Proteus
+
+![image](https://github.com/user-attachments/assets/84986e89-a022-4846-8969-412503b775f2)
+
+- در این جایگاه device های مختلف را می بینیم.
+
+- هر یک از Edge ها به Master متصل اند.
+
+- همچنین به هر یک از Edge ها سنسور رطوبت متصل است.
+
+- به Master  و هر یک از Edge ها یک دیوایس enc متصل است برای ارتباط wifi
+
+- به Master  و هر یک از Edge ها یک ترمینال برای بررسی مقادیر رد و بدل شده متصل است.
+
+- به هر یک از edge ها نیز LED  و موتور چرخش نیز متصل است.
