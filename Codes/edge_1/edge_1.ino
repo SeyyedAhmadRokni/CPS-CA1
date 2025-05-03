@@ -1,99 +1,106 @@
+// ===== Edge Node =====
 #include <EtherCard.h>
+#include <Servo.h>
 
-#define REQUEST_RATE 3000
-#define SOIL_SENSOR_PIN A0
+#define REQUEST_RATE     3000
+#define SOIL_SENSOR_PIN  A0
+#define DC_MOTOR_PIN     7
+#define SERVO_PIN        6
+#define SERVO_LED_PIN    12
 
-static byte mymac[] = { 0x74,0x69,0x69,0x2D,0x30,0x32 };
-static byte myip[] = { 192,168,2,3 };
-static byte gwip[] = { 192,168,2,1 };
-static byte hisip[] = { 192,168,2,2 };
+static byte mymac[] = {0x74,0x69,0x69,0x2D,0x30,0x32};
+static byte myip[]  = {192,168,2,3};
+static byte gwip[]  = {192,168,2,1};
+static byte hisip[] = {192,168,2,2};
 
 byte Ethernet::buffer[700];
 static long timer;
 bool ethernetInitialized = false;
-int edgeId = 1; // شناسه گره
+int edgeId = 1;
+Servo potServo;
 
-// تابع callback برای پردازش پاسخ
 static void responseCallback(byte status, word off, word len) {
-  Serial.println("\n=== Response Received ===");
-  
-  if (status == 0) { // اگر وضعیت 0 باشد یعنی پاسخ دریافت شده
-    Serial.print("Status: Success | ");
-    Serial.print("Length: ");
-    Serial.println(len);
-    
-    if (len > 0) {
-      Serial.print("Data: ");
-      Serial.println((const char*) Ethernet::buffer + off);
-      
-      // پردازش پاسخ سرور
-      String response = String((const char*) Ethernet::buffer + off);
-      if (response.startsWith("WATER:")) {
-        int rate = response.substring(6).toInt();
-        Serial.print("Start watering with rate: ");
-        Serial.println(rate);
-        // فعال کردن موتور آبیاری
-      } else if (response == "NO_WATER") {
-        Serial.println("No watering needed");
-        // غیرفعال کردن موتور آبیاری
-      }
-    }
+  if (status != 0 || len == 0) {
+    Serial.print("Error status="); Serial.println(status);
+    return;
+  }
+
+  // جدا کردن body از HTTP
+  String raw = String((char*)Ethernet::buffer + off).substring(0, len);
+  int idx = raw.indexOf("\r\n\r\n");
+  if (idx < 0) {
+    Serial.println("Invalid HTTP");
+    return;
+  }
+  String body = raw.substring(idx + 4);
+
+  // تفکیک دستورات
+  int sep = body.indexOf(';');
+  String waterCmd = body.substring(0, sep);
+  String rotCmd   = body.substring(sep + 1);
+
+  Serial.print("Body: "); Serial.println(body);
+
+  // اجرای آبیاری
+  if (waterCmd.startsWith("WATER:")) {
+    int rate = waterCmd.substring(6).toInt();  // cc یا قطره بر دقیقه
+    Serial.print("Water rate: "); Serial.println(rate);
+    digitalWrite(DC_MOTOR_PIN, HIGH);
+    delay(rate * 1000);  // یا تبدیل دلخواه
+    digitalWrite(DC_MOTOR_PIN, LOW);
+  }
+
+  // اجرای چرخش
+  if (rotCmd == "ROTATE:0") {
+    Serial.println("Rotate to 0°");
+    digitalWrite(SERVO_LED_PIN, HIGH);
+    potServo.write(0);
+    delay(500);
+    digitalWrite(SERVO_LED_PIN, LOW);
   } else {
-    Serial.print("Error in response, status: ");
-    Serial.println(status);
+    Serial.println("Rotate to 60°");
+    digitalWrite(SERVO_LED_PIN, HIGH);
+    potServo.write(60);
+    delay(500);
+    digitalWrite(SERVO_LED_PIN, LOW);
   }
 }
 
 void setup() {
   Serial.begin(9600);
   Serial.println(F("\nStarting Edge Client..."));
+  potServo.attach(SERVO_PIN);
+  pinMode(DC_MOTOR_PIN, OUTPUT);
+  pinMode(SERVO_LED_PIN, OUTPUT);
+  digitalWrite(DC_MOTOR_PIN, LOW);
+  digitalWrite(SERVO_LED_PIN, LOW);
 
-  // تلاش برای اتصال اترنت
+  // راه‌اندازی Ethernet
   for (int i = 0; i < 3; i++) {
-    if (ether.begin(sizeof Ethernet::buffer, mymac, SS)) {
-      ethernetInitialized = true;
-      break;
-    }
+    if (ether.begin(sizeof Ethernet::buffer, mymac, SS)) break;
     Serial.println(F("Retrying Ethernet initialization..."));
-    delay(2000);
+    delay(1000);
   }
-  
-
   ether.staticSetup(myip, gwip);
   ether.copyIp(ether.hisip, hisip);
-  
+
   while (ether.clientWaitingGw()) {
     ether.packetLoop(ether.packetReceive());
   }
 
-  Serial.println(F("Network ready"));
-  timer = -REQUEST_RATE;
+  Serial.println("Edge Client ready");
 }
 
 void loop() {
   ether.packetLoop(ether.packetReceive());
-  
-  if (millis() > timer + REQUEST_RATE) {
-    timer = millis();
-    
-    // خواندن رطوبت خاک
-    int rawMoisture = analogRead(SOIL_SENSOR_PIN);
-    int moisture = map(rawMoisture, 0, 1023, 0, 100);
-    
-    Serial.print(F("\nSending moisture: "));
-    Serial.print(moisture);
-    Serial.print(F("% | Edge ID: "));
-    Serial.println(edgeId);
+  if (millis() - timer < REQUEST_RATE) return;
+  timer = millis();
 
-    // ساخت پارامترهای درخواست
-    char params[30];
-    sprintf(params, "?moisture=%d&edge=%d", moisture, edgeId);
-    
-    // بررسی اتصال قبل از ارسال
-    if (!ether.clientWaitingGw()) {
-      ether.browseUrl(PSTR("/moisture"), params, PSTR("192.168.2.2"), responseCallback);
-    } else {
-      Serial.println(F("Network not ready, skipping request"));
-    }
-  }
+  int rawM = analogRead(SOIL_SENSOR_PIN);
+  int moisture = map(rawM, 0, 1023, 0, 100);
+  Serial.print("Sending moisture="); Serial.println(moisture);
+
+  char params[30];
+  sprintf(params, "?moisture=%d&edge=%d", moisture, edgeId);
+  ether.browseUrl(PSTR("/moisture"), params, PSTR("192.168.2.2"), responseCallback);
 }
