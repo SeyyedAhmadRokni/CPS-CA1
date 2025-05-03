@@ -25,32 +25,37 @@ static void responseCallback(byte status, int off, int len) {
     return;
   }
 
-  // استخراج body از پاسخ HTTP
-  char body[len + 1];
-  memcpy(body, Ethernet::buffer + off, len);
-  body[len] = '\0'; // پایان رشته
+  // استخراج body از HTTP
+  String raw = String((char*)Ethernet::buffer + off);
+  int idx = raw.indexOf("\r\n\r\n");
+  if (idx < 0) {
+    Serial.println("Invalid HTTP");
+    return;
+  }
+  String body = raw.substring(idx + 4); // محتویات بعد از header
 
   Serial.println("===== RAW BODY =====");
   Serial.println(body);
   Serial.println("====================");
 
-  // تفکیک دستورات
-  char* sep = strchr(body, ';');
-  if (!sep) {
-    Serial.println("Invalid format: missing ';'");
+  // جدا کردن بر اساس ;
+  int sep1 = body.indexOf(';');
+  int sep2 = body.indexOf(';', sep1 + 1);
+
+  if (sep1 < 0 || sep2 < 0) {
+    Serial.println("Invalid body format");
     return;
   }
 
-  *sep = '\0'; // جدا کردن دو بخش
-  const char* waterCmd = body;
-  const char* rotCmd = sep + 1;
+  String waterCmd = body.substring(0, sep1);
+  String rotCmd   = body.substring(sep1 + 1, sep2);
 
   Serial.print("Water Cmd: "); Serial.println(waterCmd);
   Serial.print("Rotate Cmd: "); Serial.println(rotCmd);
 
   // اجرای آبیاری
-  if (strncmp(waterCmd, "WATER:", 6) == 0) {
-    int rate = atoi(waterCmd + 6);
+  if (waterCmd.startsWith("WATER:")) {
+    int rate = waterCmd.substring(6).toInt();
     Serial.print("Water rate: "); Serial.println(rate);
     digitalWrite(DC_MOTOR_PIN, HIGH);
     delay(rate * 1000);
@@ -58,13 +63,13 @@ static void responseCallback(byte status, int off, int len) {
   }
 
   // اجرای چرخش
-  if (strcmp(rotCmd, "ROTATE:0") == 0) {
+  if (rotCmd == "ROTATE:0") {
     Serial.println("Rotate to 0°");
     digitalWrite(SERVO_LED_PIN, HIGH);
     potServo.write(0);
     delay(500);
     digitalWrite(SERVO_LED_PIN, LOW);
-  } else if (strcmp(rotCmd, "ROTATE:60") == 0) {
+  } else if (rotCmd == "ROTATE:60") {
     Serial.println("Rotate to 60°");
     digitalWrite(SERVO_LED_PIN, HIGH);
     potServo.write(60);

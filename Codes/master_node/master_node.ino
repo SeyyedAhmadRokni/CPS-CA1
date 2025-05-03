@@ -73,13 +73,13 @@ void loop() {
   strcpy(body, waterBuf);
   strcat(body, ";");
   strcat(body, rotBuf);
+  strcat(body, ";");
 
   int bodyLen = strlen(body);
   char resp[256];
   snprintf(resp, sizeof(resp),
-  "HTTP/1.0 200 OK\r\n"
-  "%s"
-  "\r\n",
+  "HTTP/1.0 200 OK\r\n\r\n"
+  "%s",
    body);
   Serial.print("Resp Len: ");
   
@@ -91,6 +91,8 @@ void loop() {
   // لاگ برای دیباگ
   printSensorData(moisture, edgeId, temp, lightL, lightR);
 }
+
+
 void printSensorData(int moisture, int edgeId, int temp, int lightL, int lightR) {
   Serial.print("Edge: ");
   Serial.print(edgeId);
