@@ -5,8 +5,8 @@
 #define REQUEST_RATE     3000
 #define SOIL_SENSOR_PIN  A0
 #define DC_MOTOR_PIN     8
-#define WATER_10CC_LED   7  // was 6
-#define WATER_5CC_LED    3  // was 5
+#define WATER_10CC_LED   7  
+#define WATER_5CC_LED    3 
 #define SERVO_PIN        9
 #define SERVO_POS_LED    4
 
@@ -55,7 +55,6 @@ static void responseCallback(byte status, int off, int len) {
   Serial.print("Water Cmd: "); Serial.println(waterCmd);
   Serial.print("Rotate Cmd: "); Serial.println(rotCmd);
 
-  // اجرای آبیاری
   if (waterCmd.startsWith("WATER:")) {
     int rate = waterCmd.substring(6).toInt();
     Serial.print("Water rate: "); Serial.println(rate);
@@ -79,7 +78,6 @@ static void responseCallback(byte status, int off, int len) {
     digitalWrite(WATER_5CC_LED, LOW);
   }
 
-  // اجرای چرخش
   if (rotCmd.startsWith("ROTATE:")) {
     int targetPos = rotCmd.substring(7).toInt();
     if (targetPos != currentServoPos) {
