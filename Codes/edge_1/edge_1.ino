@@ -4,9 +4,11 @@
 
 #define REQUEST_RATE     3000
 #define SOIL_SENSOR_PIN  A0
-#define DC_MOTOR_PIN     7
-#define SERVO_PIN        6
-#define SERVO_LED_PIN    12
+#define DC_MOTOR_PIN     8
+#define WATER_10CC_LED   7  // was 6
+#define WATER_5CC_LED    3  // was 5
+#define SERVO_PIN        9
+#define SERVO_POS_LED    4
 
 static byte mymac[] = {0x74,0x69,0x69,0x2D,0x30,0x32};
 static byte myip[]  = {192,168,2,3};
@@ -19,26 +21,26 @@ bool ethernetInitialized = false;
 int edgeId = 1;
 Servo potServo;
 
+int currentServoPos = 0; 
+
 static void responseCallback(byte status, int off, int len) {
   if (status != 0 || len == 0) {
     Serial.print("Error status="); Serial.println(status);
     return;
   }
 
-  // استخراج body از HTTP
   String raw = String((char*)Ethernet::buffer + off);
   int idx = raw.indexOf("\r\n\r\n");
   if (idx < 0) {
     Serial.println("Invalid HTTP");
     return;
   }
-  String body = raw.substring(idx + 4); // محتویات بعد از header
+  String body = raw.substring(idx + 4);
 
   Serial.println("===== RAW BODY =====");
   Serial.println(body);
   Serial.println("====================");
 
-  // جدا کردن بر اساس ;
   int sep1 = body.indexOf(';');
   int sep2 = body.indexOf(';', sep1 + 1);
 
@@ -57,39 +59,54 @@ static void responseCallback(byte status, int off, int len) {
   if (waterCmd.startsWith("WATER:")) {
     int rate = waterCmd.substring(6).toInt();
     Serial.print("Water rate: "); Serial.println(rate);
+
     digitalWrite(DC_MOTOR_PIN, HIGH);
-    delay(rate * 1000);
+    if (rate == 15) {
+      digitalWrite(WATER_10CC_LED, HIGH);
+      digitalWrite(WATER_5CC_LED, HIGH);
+    } else if (rate == 10) {
+      digitalWrite(WATER_10CC_LED, HIGH);
+      digitalWrite(WATER_5CC_LED, LOW);
+    } else if (rate == 5) {
+      digitalWrite(WATER_10CC_LED, LOW);
+      digitalWrite(WATER_5CC_LED, HIGH);
+    }
+
+    delay(5 * rate);
+
     digitalWrite(DC_MOTOR_PIN, LOW);
+    digitalWrite(WATER_10CC_LED, LOW);
+    digitalWrite(WATER_5CC_LED, LOW);
   }
 
   // اجرای چرخش
-  if (rotCmd == "ROTATE:0") {
-    Serial.println("Rotate to 0°");
-    digitalWrite(SERVO_LED_PIN, HIGH);
-    potServo.write(0);
-    delay(500);
-    digitalWrite(SERVO_LED_PIN, LOW);
-  } else if (rotCmd == "ROTATE:60") {
-    Serial.println("Rotate to 60°");
-    digitalWrite(SERVO_LED_PIN, HIGH);
-    potServo.write(60);
-    delay(500);
-    digitalWrite(SERVO_LED_PIN, LOW);
-  } else {
-    Serial.println("Unknown rotation command.");
+  if (rotCmd.startsWith("ROTATE:")) {
+    int targetPos = rotCmd.substring(7).toInt();
+    if (targetPos != currentServoPos) {
+      potServo.write(targetPos);
+      Serial.print("Rotate to "); Serial.print(targetPos); Serial.println("°");
+
+      if (targetPos == 0) {
+        digitalWrite(SERVO_POS_LED, LOW);
+      } else if (targetPos == 60) {
+        digitalWrite(SERVO_POS_LED, HIGH);
+      }
+      currentServoPos = targetPos;
+    }
   }
 }
 
 void setup() {
   Serial.begin(9600);
-  Serial.println(F("\nStarting Edge Client..."));
+  Serial.print(F("\nStarting Edge "));
+  Serial.print(edgeId);
+  Serial.println("...");
   potServo.attach(SERVO_PIN);
   pinMode(DC_MOTOR_PIN, OUTPUT);
-  pinMode(SERVO_LED_PIN, OUTPUT);
-  digitalWrite(DC_MOTOR_PIN, LOW);
-  digitalWrite(SERVO_LED_PIN, LOW);
+  pinMode(WATER_10CC_LED, OUTPUT);
+  pinMode(WATER_5CC_LED, OUTPUT);
+  pinMode(SERVO_POS_LED, OUTPUT);
 
-  // راه‌اندازی Ethernet
   for (int i = 0; i < 3; i++) {
     if (ether.begin(sizeof Ethernet::buffer, mymac, SS)) break;
     Serial.println(F("Retrying Ethernet initialization..."));
